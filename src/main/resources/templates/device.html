@@ -1,0 +1,201 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<title>IoT Dashboard</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<style type="text/css">
+div#site_list {
+	float: left;
+	width: 20%;
+	height: 300px;
+	margin-top: 10px;
+}
+
+div#map_container {
+	float: left;
+	width: 60%;
+	height: 300px;
+	margin-top: 10px;
+}
+
+div#site_alarm {
+	float: left;
+	width: 20%;
+	height: 300px;
+	margin-top: 10px;
+}
+
+div.gauge {
+	float: left;
+	width: 200px;
+	height: 160px;
+}
+</style>
+
+<link rel="stylesheet" type="text/css"
+	href="webjars/bootstrap/3.3.7/css/bootstrap.min.css" />
+
+<script type="text/javascript" src="webjars/jquery/2.2.4/jquery.min.js"></script>
+<script type="text/javascript"
+	src="webjars/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+<script type="text/javascript" src="js/justgage.min.js"></script>
+<script type="text/javascript" src="js/raphael.min.js"></script>
+
+<script type="text/javascript"
+	src="http://maps.googleapis.com/maps/api/js?key=AIzaSyAAA7WmVBkJZ4lszBA7koYPOCfImT4JkYc"></script>
+
+<script src="webjars/stomp-websocket/2.3.3/stomp.js"></script>
+
+<script type="text/javascript">
+	function loadMap() {
+		var str = location.search.substr(1);
+		console.log(str);
+		var strs = new Array();
+		strs = str.split("=");
+		var tenantToken = strs[0];
+		var siteToken = strs[1];
+		$.ajax({
+					type : "POST",
+					url : "api/v1/sitewhere",
+					data : {
+						type : "devices",
+						tenantToken : tenantToken,
+						siteToken : siteToken
+					},
+					dataType : "json",
+					success : function(data) {
+						console.log(data);
+						if (data != null) {
+							for ( var i in data) {
+								//console.log(data[i]);
+								var div = document.createElement("a");
+								div.id = data[i].hardwareId;
+								div.className = "list-group-item list-group-item-info list-group-item-action";
+								div.style = "margin-top:10px;";
+								div.innerHTML = data[i].hardwareId;
+								/* div.onclick = function(){
+									window.location.href = "/home?" + token;
+								}; */
+								//div.href = "/device";
+								document.getElementById("site-name-list")
+										.appendChild(div);
+							}
+
+						}
+
+					},
+				});
+
+		/* var latlng = new google.maps.LatLng(39.9992342744, 116.4839384094);
+		var myOptions = {
+			zoom : 15,
+			center : latlng,
+			mapTypeId : google.maps.MapTypeId.ROADMAP
+		};
+		var map = new google.maps.Map(document.getElementById("map_container"),
+				myOptions);
+
+		var marker = new google.maps.Marker({
+			position : latlng,
+			map : map,
+			title : "my hometown, Malim Nawar!"
+		}); */
+
+		};
+</script>
+</head>
+<body onload="loadMap()">
+
+	<nav class="navbar navbar-inverse">
+		<div class="container">
+			<div class="navbar-header">
+				<a class="navbar-brand" href="#">IoT Dashboard</a>
+			</div>
+
+			<!-- <div id="navbar" class="collapse navbar-collapse">
+				<ul class="nav navbar-nav">
+					<li class="active"><a href="#">Home</a></li>
+					<li><a href="#about">About</a></li>
+				</ul>
+			</div> -->
+
+			<div class="navbar-header navbar-right">
+				<a class="navbar-brand" href="logout">Sign Out</a>
+			</div>
+		</div>
+	</nav>
+
+	<div class="container">
+
+		<div class="up-template">
+			<!-- 			<h1>Sites Map and Info</h1> -->
+			<div id="site_list" class="container">
+				<!-- 				<h3>sites</h3> -->
+				<span class="label label-success center-block"
+					style="font-size: 15px">Device List</span>
+				<ul id="site-name-list" class="list-group">
+					<!-- <li class="list-group-item">111</li>
+					<li class="list-group-item">222</li>
+					<li class="list-group-item">333</li>
+					<li class="list-group-item">444</li>
+					<li class="list-group-item">555</li> -->
+				</ul>
+			</div>
+			<div id="map_container" class="container"></div>
+			<div id="site_alarm" class="container">
+				<!-- 				<h3>alarms</h3> -->
+				<span class="label label-success center-block"
+					style="font-size: 15px">Alarm List</span>
+				<ul id="site-alarm-list" class="list-group">
+					<!-- <li class="list-group-item">111</li>
+					<li class="list-group-item">222</li>
+					<li class="list-group-item">333</li>
+					<li class="list-group-item">444</li>
+					<li class="list-group-item">555</li> -->
+				</ul>
+			</div>
+		</div>
+	</div>
+	<div class="container">
+		<div class="down-template" style="margin-top: 10px;">
+			<!--  			<h2>Sites Statistics</h2> -->
+			<span class="label label-success center-block"
+				style="font-size: 15px;">Some Statistics</span>
+			<div id="gauge_one" class="gauge"></div>
+			<script>
+				var g = new JustGage({
+					id : "gauge_one",
+					value : 67,
+					min : 0,
+					max : 100,
+					title : "Working"
+				});
+			</script>
+			<div id="gauge_two" class="gauge"></div>
+			<script>
+				var g = new JustGage({
+					id : "gauge_two",
+					value : 67,
+					min : 0,
+					max : 100,
+					title : "Sleep"
+				});
+			</script>
+			<div id="gauge_three" class="gauge"></div>
+			<script>
+				var g = new JustGage({
+					id : "gauge_three",
+					value : 67,
+					min : 0,
+					max : 100,
+					title : "OFF"
+				});
+			</script>
+		</div>
+
+	</div>
+	<!-- /.container -->
+
+</body>
+</html>

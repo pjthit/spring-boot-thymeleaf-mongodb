@@ -24,6 +24,7 @@ div#site_alarm {
 	height: 300px;
 	margin-top: 10px;
 }
+
 div.gauge {
 	float: left;
 	width: 200px;
@@ -44,9 +45,59 @@ div.gauge {
 <script type="text/javascript"
 	src="http://maps.googleapis.com/maps/api/js?key=AIzaSyAAA7WmVBkJZ4lszBA7koYPOCfImT4JkYc"></script>
 
+<script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=sY9iK6sum4aWPKx4zy1WQIE8BNejpnmC"></script>
+
+<script src="webjars/stomp-websocket/2.3.3/stomp.js"></script>
+
 <script type="text/javascript">
 	function loadMap() {
-		var latlng = new google.maps.LatLng(39.9992342744, 116.4839384094);
+		var tenantToken = location.search.substr(1);
+		var pointArray = new Array();
+		$.ajax({
+				type : "POST",
+				url : "api/v1/sitewhere",
+				data : {
+					type : "sites",
+					tenantToken : tenantToken
+				},
+				dataType : "json",
+				success : function(data) {
+					console.log(data);
+					if (data != null) {
+						for ( var i in data) {
+							//console.log(data[i]);
+							var div = document.createElement("a");
+							div.id = data[i].name;
+							div.className = "list-group-item list-group-item-info list-group-item-action";
+							div.style = "margin-top:10px;";
+							div.innerHTML = data[i].name;
+							/* div.onclick = function(){
+								window.location.href = "/device?" + tenantToken + "=" + data[i].token;
+							}; */
+							div.href = "/device?" + tenantToken + "=" + data[i].token;
+							//div.setAttribute("th:href", "@{/device(t=${tenantToken})}");
+							var point = {"lat":data[i].map.metadata.centerLatitude, "lng":data[i].map.metadata.centerLongitude};
+							pointArray.push(point);
+							document.getElementById("site-name-list")
+									.appendChild(div);
+						}
+
+					}
+
+				},
+			});
+
+		//baidu map
+		var map = new BMap.Map("map_container");
+		var view = map.getViewport(pointArray);
+		var mapZoom = view.zoom;
+		var centerPoint = view.center;
+		map.centerAndZoom(centerPoint, mapZoom);
+		map.setCurrentCity("北京");
+		map.enableScrollWheelZoom(true);
+		
+		//google map
+		/* var latlng = new google.maps.LatLng(39.9992342744, 116.4839384094);
 		var myOptions = {
 			zoom : 15,
 			center : latlng,
@@ -59,8 +110,32 @@ div.gauge {
 			position : latlng,
 			map : map,
 			title : "my hometown, Malim Nawar!"
-		});
+		}); */
 
+		//websocket
+		/* };
+		function websocket(){ 
+		var ws = new WebSocket('ws://127.0.0.1:8080/ws');
+		var client = Stomp.over(ws);
+
+		var on_connect = function(x) {
+			client.subscribe("/topic/test", function(data) {
+				var msg = data.body;
+				console.log("receive: " + msg);
+			});
+		};
+
+		var on_error = function() {
+			console.log('error');
+			if (client !== null) {
+				client.disconnect();
+			}
+		};
+
+		client.connect('guest', 'guest', on_connect, on_error, '/');
+
+		console.log("connecting rabbitmq...");
+		*/
 	}
 </script>
 </head>
@@ -71,14 +146,14 @@ div.gauge {
 			<div class="navbar-header">
 				<a class="navbar-brand" href="#">IoT Dashboard</a>
 			</div>
-			
+
 			<!-- <div id="navbar" class="collapse navbar-collapse">
 				<ul class="nav navbar-nav">
 					<li class="active"><a href="#">Home</a></li>
 					<li><a href="#about">About</a></li>
 				</ul>
 			</div> -->
-			
+
 			<div class="navbar-header navbar-right">
 				<a class="navbar-brand" href="logout">Sign Out</a>
 			</div>
@@ -90,28 +165,37 @@ div.gauge {
 		<div class="up-template">
 			<!-- 			<h1>Sites Map and Info</h1> -->
 			<div id="site_list" class="container">
-				<ul class="list-group">
-					<li class="list-group-item">111</li>
+				<!-- 				<h3>sites</h3> -->
+				<span class="label label-success center-block"
+					style="font-size: 15px">Site List</span>
+				<ul id="site-name-list" class="list-group">
+					<!-- <li class="list-group-item">111</li>
 					<li class="list-group-item">222</li>
 					<li class="list-group-item">333</li>
 					<li class="list-group-item">444</li>
-					<li class="list-group-item">555</li>
+					<li class="list-group-item">555</li> -->
 				</ul>
 			</div>
 			<div id="map_container" class="container"></div>
 			<div id="site_alarm" class="container">
-				<ul class="list-group">
-					<li class="list-group-item">111</li>
+				<!-- 				<h3>alarms</h3> -->
+				<span class="label label-success center-block"
+					style="font-size: 15px">Alarm List</span>
+				<ul id="site-alarm-list" class="list-group">
+					<!-- <li class="list-group-item">111</li>
 					<li class="list-group-item">222</li>
 					<li class="list-group-item">333</li>
 					<li class="list-group-item">444</li>
-					<li class="list-group-item">555</li>
+					<li class="list-group-item">555</li> -->
 				</ul>
 			</div>
 		</div>
-
-		<div class="down-template">
-			<h1>Sites Dashboard</h1>
+	</div>
+	<div class="container">
+		<div class="down-template" style="margin-top: 10px;">
+			<!--  			<h2>Sites Statistics</h2> -->
+			<span class="label label-success center-block"
+				style="font-size: 15px;">Machine Statistics</span>
 			<div id="gauge_one" class="gauge"></div>
 			<script>
 				var g = new JustGage({
@@ -119,7 +203,7 @@ div.gauge {
 					value : 67,
 					min : 0,
 					max : 100,
-					title : "Visitors"
+					title : "Working"
 				});
 			</script>
 			<div id="gauge_two" class="gauge"></div>
@@ -129,7 +213,17 @@ div.gauge {
 					value : 67,
 					min : 0,
 					max : 100,
-					title : "Visitors"
+					title : "Sleep"
+				});
+			</script>
+			<div id="gauge_three" class="gauge"></div>
+			<script>
+				var g = new JustGage({
+					id : "gauge_three",
+					value : 67,
+					min : 0,
+					max : 100,
+					title : "OFF"
 				});
 			</script>
 		</div>

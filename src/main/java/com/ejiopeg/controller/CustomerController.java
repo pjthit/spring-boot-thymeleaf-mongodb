@@ -8,9 +8,12 @@ import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.URL;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 import org.apache.http.HttpEntity;
@@ -19,11 +22,10 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.json.JSONArray;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
@@ -32,10 +34,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 import com.ejiopeg.model.Customer;
 import com.ejiopeg.model.Service;
 import com.ejiopeg.model.User;
+import com.ejiopeg.rabbitmq.RabbitmqMessageSender;
 import com.ejiopeg.repository.CustomerRepository;
+import com.ejiopeg.util.SitewhereUtil;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -45,6 +52,12 @@ public class CustomerController {
 
 	@Autowired
 	private CustomerRepository repository;
+	
+	@Autowired
+	private RabbitmqMessageSender mqSender;
+	
+	@Autowired
+	private SitewhereUtil sitewhereUtil;
 	
 	@RequestMapping("/customer")
 	public void init() {
@@ -97,42 +110,70 @@ public class CustomerController {
 		repository.delete(new Customer(firstName, lastName));
 	}
 	
-	@RequestMapping(value = "/{domain}", method = RequestMethod.POST)
-	public void siteWhere(@PathVariable String domain, HttpServletRequest httpRequest) {
+	@RequestMapping(value = "/sitewhere/tenant", method = RequestMethod.POST)
+	public ResponseEntity<JSONArray> siteWhereTenant() {
+		JSONArray result = null;
 		try {
-			String ipport = "";
-			String auth = "";
-			User userDetails = (User)SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-			if (userDetails.getServices() != null && userDetails.getServices().size() != 0) {
-				for (Service service : userDetails.getServices()) {
-					if (service.getServiceName().equals(domain)) {
-						ipport = service.getServiceUrl();
-						auth = service.getAuth();
-					}
-				}
-			}
-			String api = httpRequest.getParameter("api");
-			if (ipport == null || api == null || ipport == "" || api == "") {
-				ResponseEntity.badRequest();
-				return;
-			}
-			//String url = "http://" + siteWhere + "/sitewhere/api/assets/categories";
-			String url = "http://" + ipport + api;
-			auth = "Basic " + Base64.getEncoder().encodeToString((auth).getBytes());
-			HttpClient client = HttpClients.createDefault();
-			HttpGet request = new HttpGet(url);
-			request.setHeader("Authorization", auth);
-			request.setHeader("X-SiteWhere-Tenant", "sitewhere1234567890");
-			HttpResponse response = client.execute(request);
-			HttpEntity entity = response.getEntity();
-			//System.out.println("Response content: " + EntityUtils.toString(entity));
-			JSONObject jo = new JSONObject(EntityUtils.toString(entity));
-			//JSONArray joResult = jo.getJSONArray("results");
-			ResponseEntity.ok(jo);
+			//Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+			//String username = String.valueOf(principal);
+			User user = (User)SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+			String username = user.getUsername();
+			Map<String, String> params = new HashMap<String, String>();
+			params.put("type", "GET");
+			params.put("api", "/sitewhere/api/users/"+username+"/tenants");
+			String jo = sitewhereUtil.send2Sitewhere(params);
+			/*if(jo.startsWith("[")) {
+				jo = jo.substring(1, jo.length()-1);
+			}*/
+			result = JSON.parseArray(jo);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} finally {
 		}
+		
+		return new ResponseEntity<JSONArray>(result, HttpStatus.OK);
+	}
+	
+	@RequestMapping(value = "/sitewhere", method = RequestMethod.POST)
+	public ResponseEntity<JSONArray> siteWhereSiteDevice(HttpServletRequest request, 
+			HttpServletResponse response) {
+		//Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+		User user = (User)SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+		//String username = user.getUsername();
+		JSONArray result = null;
+		String type = request.getParameter("type");
+		String tenantToken = request.getParameter("tenantToken");
+		String siteToken = request.getParameter("siteToken");
+		String auth = "Basic " + Base64.getEncoder().encodeToString((user.getUsername()+":"+user.getPassword()).getBytes());
+		try {
+			
+			Map<String, String> params = new HashMap<String, String>();
+			params.put("type", "GET");
+			params.put("api", "/sitewhere/api/" + type + "/");
+			params.put("auth", auth);
+			if (type.equalsIgnoreCase("sites")) {
+				params.put("tenantToken", tenantToken);
+			}else if (type.equals("devices")) {
+				params.put("tenantToken", tenantToken);
+				params.put("siteToken", siteToken);
+			}
+			String jo = sitewhereUtil.send2Sitewhere(params);
+			if(jo.startsWith("[") || jo.startsWith("{")) {
+				result = JSONObject.parseObject(jo).getJSONArray("results");
+			}else {
+				return new ResponseEntity<JSONArray>(result, HttpStatus.NOT_FOUND);
+			}
+			
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return new ResponseEntity<JSONArray>(result, HttpStatus.OK);
+	}
+	
+	@RequestMapping(value = "/rabbitmq/{content}")
+	public void rabbitmqSender(@PathVariable String content) {
+		mqSender.sendMessage(content);
 	}
 }

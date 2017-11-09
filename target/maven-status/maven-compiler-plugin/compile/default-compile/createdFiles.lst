@@ -1,0 +1,17 @@
+com\ejiopeg\IoTWebApplication.class
+com\ejiopeg\repository\UserRepository.class
+com\ejiopeg\controller\DefaultController.class
+com\ejiopeg\repository\CustomerRepository.class
+com\ejiopeg\error\MyAccessDeniedHandler.class
+com\ejiopeg\util\SitewhereUtil.class
+com\ejiopeg\model\User.class
+com\ejiopeg\model\Customer.class
+com\ejiopeg\model\Service.class
+com\ejiopeg\rabbitmq\RabbitmqMessageSender.class
+com\ejiopeg\rabbitmq\WebSocketConfig.class
+com\ejiopeg\rabbitmq\RabbitmqConfiguration.class
+com\ejiopeg\controller\CustomerController.class
+com\ejiopeg\service\MyAuthenticationProvider.class
+com\ejiopeg\rabbitmq\RabbitmqMessageListener.class
+com\ejiopeg\repository\ServiceRepository.class
+com\ejiopeg\config\SpringSecurityConfig.class

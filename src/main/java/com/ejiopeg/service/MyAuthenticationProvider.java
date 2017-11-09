@@ -14,12 +14,11 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.json.JSONException;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -33,23 +32,20 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Component;
 
+import com.alibaba.fastjson.JSONObject;
 import com.ejiopeg.model.Service;
 import com.ejiopeg.model.User;
-import com.ejiopeg.repository.ServiceRepository;
-import com.ejiopeg.repository.UserRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.util.JSONPObject;
 
 @Component
-public class MyAuthenticationProvider implements AuthenticationProvider {
+public class MyAuthenticationProvider implements AuthenticationProvider
+																		//, UserDetailsService  
+																		{
 	
 	private final Logger logger = LoggerFactory.getLogger(MyAuthenticationProvider.class);
 
 	private static MessageDigestPasswordEncoder passwordEncoder = new ShaPasswordEncoder();
-	
-	@Autowired
-	UserRepository userRepository;
-	
-	@Autowired
-	ServiceRepository serviceRepository;
 	
 	@Value("${sitewhere.domain}")
 	private String siteWhereDomain;
@@ -65,6 +61,8 @@ public class MyAuthenticationProvider implements AuthenticationProvider {
 
 		User user = new User();
 		user.setUsername(username);
+		user.setSitewhereUsername(this.loginUsername);
+		user.setSitewherePassword(this.loginPassword);
 		return user;
 	}*/
 
@@ -85,7 +83,7 @@ public class MyAuthenticationProvider implements AuthenticationProvider {
 			request.setHeader("Authorization", auth);
 			HttpResponse response = client.execute(request);
 			HttpEntity entity = response.getEntity();
-			jo = new JSONObject(EntityUtils.toString(entity));
+			jo = JSONObject.parseObject(EntityUtils.toString(entity));
 		} catch (Exception e) {
 			logger.error(e.toString());
 		}
@@ -95,8 +93,11 @@ public class MyAuthenticationProvider implements AuthenticationProvider {
 		
 		String stored_hashpwd = jo.getString("hashedPassword");
 		if (encoderPwd.equals(stored_hashpwd)) {
+			User user = new User();
+			user.setUsername(username);
+			user.setPassword(password);
 			return new UsernamePasswordAuthenticationToken
-		              (username, password, Collections.emptyList());
+		              (user, password, Collections.emptyList());
 		} else {
             throw new BadCredentialsException("External system authentication failed");
         }

@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.access.AccessDeniedHandler;
 
+import com.ejiopeg.model.User;
 import com.ejiopeg.service.MyAuthenticationProvider;
 
 @Configuration
@@ -23,7 +24,7 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
     
     @Autowired
     private MyAuthenticationProvider authProvider;
-
+    
     // roles admin allow to access /admin/**
     // roles user allow to access /user/**
     // custom 403 access denied handler
@@ -37,7 +38,7 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
                 //.antMatchers("/user/**").hasAnyRole("USER")
                 .anyRequest().authenticated()
                 .and()
-                .formLogin().loginPage("/login").defaultSuccessUrl("/home").permitAll()
+                .formLogin().loginPage("/login").defaultSuccessUrl("/portal").permitAll()
                 .and()
                 .logout().permitAll()
                 .and()
@@ -65,7 +66,7 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-        //auth.userDetailsService(userService());
+        //auth.userDetailsService(authProvider);
     	auth.authenticationProvider(authProvider);
     	//auth.inMemoryAuthentication().withUser("admin").password("password").roles("ADMIN");
     }

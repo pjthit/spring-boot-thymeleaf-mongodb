@@ -4,17 +4,13 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.data.annotation.Id;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 public class User implements UserDetails{
 
-	@Id
-    public String id;
 	private String username;
     private String password;
-    private List<Service> services;
 	
 	public String getUsername() {
 		return username;
@@ -27,12 +23,6 @@ public class User implements UserDetails{
 	}
 	public void setPassword(String password) {
 		this.password = password;
-	}
-	public List<Service> getServices() {
-		return services;
-	}
-	public void setServices(List<Service> services) {
-		this.services = services;
 	}
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {
